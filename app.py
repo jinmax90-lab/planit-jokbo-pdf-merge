@@ -296,21 +296,27 @@ def main():
         st.warning("⬅️ 사이드바에서 맨뒷장 템플릿을 업로드해주세요.")
         return
 
-    # ── 그룹 배정 ──
+    # ── 그룹 배정 (접히는 형태) ──
     sorted_pdfs = sorted(uploaded_pdfs, key=lambda f: f.name)
 
-    st.subheader(f"📊 {len(sorted_pdfs)}개 배포그룹")
+    st.caption(f"✅ {len(sorted_pdfs)}개 배포그룹 감지됨 (파일명 순서대로 자동 배정)")
 
     group_assignments = {}
-    cols = st.columns(min(len(sorted_pdfs), 3))
-    for i, pdf_file in enumerate(sorted_pdfs):
-        with cols[i % 3]:
-            name = pdf_file.name
-            if len(name) > 40: name = name[:18] + "..." + name[-18:]
-            group_assignments[i] = st.selectbox(
-                f"📄 {name}", list(range(1, MAX_GROUPS+1)),
-                index=i, key=f"grp_{i}"
-            )
+    with st.expander("배포그룹 순서 변경", expanded=False):
+        cols = st.columns(min(len(sorted_pdfs), 3))
+        for i, pdf_file in enumerate(sorted_pdfs):
+            with cols[i % 3]:
+                name = pdf_file.name
+                if len(name) > 40: name = name[:18] + "..." + name[-18:]
+                group_assignments[i] = st.selectbox(
+                    f"📄 {name}", list(range(1, MAX_GROUPS+1)),
+                    index=i, key=f"grp_{i}"
+                )
+
+    # 기본값 (expander 안 열었을 때)
+    if not group_assignments:
+        for i in range(len(sorted_pdfs)):
+            group_assignments[i] = i + 1
 
     if len(set(group_assignments.values())) != len(group_assignments):
         st.error("⚠️ 배포그룹 번호가 중복됩니다!")
@@ -318,22 +324,31 @@ def main():
 
     st.divider()
 
-    # ── 정답지 분리 토글 (메인 영역, 크게) ──
-    toggle_col1, toggle_col2 = st.columns([3, 1])
-    with toggle_col1:
-        st.subheader("정답지 분리 출력")
-    with toggle_col2:
-        separate_answers = st.toggle(
-            "분리",
-            value=True,
-            help="ON: 시험지 + 정답지 2개 파일 / OFF: 전부 합쳐서 1개 파일",
-            label_visibility="collapsed"
-        )
+    # ── 정답지 분리 토글 ──
+    # 토글 크기 키우는 CSS
+    st.markdown("""
+    <style>
+    div[data-testid="stToggle"] > label > div[data-testid="stMarkdownContainer"] > p {
+        font-size: 1.15rem;
+        font-weight: 600;
+    }
+    div[data-testid="stToggle"] > label > div:last-child {
+        transform: scale(1.3);
+        transform-origin: center;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+    separate_answers = st.toggle(
+        "정답지 분리 출력",
+        value=True,
+        help="ON: 시험지 + 정답지 2개 파일 / OFF: 전부 합쳐서 1개 파일",
+    )
 
     if separate_answers:
         st.caption("시험지(문제 + 맨뒷장)와 정답지가 **각각** 생성됩니다.")
     else:
-        st.caption("문제 + 정답 + 맨뒷장이 **하나의 PDF**로 생성됩니다.")
+        st.caption("문제 + QR안내 + 정답이 **하나의 PDF**로 생성됩니다.")
 
     st.divider()
 
